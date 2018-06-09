@@ -1,7 +1,6 @@
 package org.rebeam.tree.stm
 
-import cats.data.State
-import org.rebeam.tree.random.PRandom
+import cats.Monad
 
 object STM {
   type Guid = Long
@@ -28,10 +27,12 @@ object STM {
 case class Id[+A](guid: STM.Guid)
 
 
-trait STM[F[_]] {
+abstract class STM[F[_]: Monad] {
 
   def get[A](id: Id[A]): F[Option[A]]
   def set[A](id: Id[A], a: A): F[Unit]
+
+  def modifyF[A](id: Id[A], f: A => F[A]): F[Option[A]]
 
   def randomInt: F[Int]
   def randomIntUntil(bound: Int): F[Int]
@@ -40,35 +41,20 @@ trait STM[F[_]] {
   def randomFloat: F[Float]
   def randomDouble: F[Double]
 
+  def context: F[STMContext]
+
+  //Safer if this is used only via put and putF
+  //def createGuid: F[Guid]
+
+  def putF[A](create: Id[A] => F[A]): F[A]
+
+  // For convenience, allow use of plain A
+  def put[A](create: Id[A] => A): F[A] = putF(create.andThen(pure))
+  def modify[A](id: Id[A], f: A => A): F[Option[A]] = modifyF(id, f.andThen(pure))
+
+  // For convenience, could use Monad directly
+  def pure[A](a: A): F[A] = implicitly[Monad[F]].pure(a)
 }
 
 
-/**
-  * Implementation of STM using a Map and PRandom as State
-  */
-object MapStateSTM {
-  import STM._
 
-  case class StateData(map: Map[Guid, Any], random: PRandom)
-
-  def emptyState: StateData = StateData(Map.empty, PRandom(0))
-
-  type S[A] = State[StateData, A]
-
-  def rand[A](rf: PRandom => (PRandom, A)): S[A] = State(sd => {
-    val (newRandom, a) = rf(sd.random)
-    (sd.copy(random = newRandom), a)
-  })
-
-  implicit val stmInstance: STM[S] = new STM[S] {
-    def get[A](id: Id[A]): S[Option[A]] = State(sd => (sd, sd.map.get(id.guid).map(_.asInstanceOf[A])))
-    def set[A](id: Id[A], a: A): S[Unit] = State(sd => (sd.copy(map = sd.map + (id.guid -> a)), ()))
-
-    def randomInt: S[Int] = rand(_.int)
-    def randomIntUntil(bound: Int): S[Int] = rand(_.intUntil(bound))
-    def randomLong: S[Long] = rand(_.long)
-    def randomBoolean: S[Boolean] = rand(_.boolean)
-    def randomFloat: S[Float] = rand(_.float)
-    def randomDouble: S[Double] = rand(_.double)
-  }
-}

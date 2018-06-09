@@ -6,17 +6,24 @@ import cats.implicits._
 
 object STMMain {
 
-  def example[F[_]: Monad](implicit stm: STM[F]): F[Option[Int]] = {
+  case class ThingWithId(id: Id[ThingWithId], name: String)
+
+  def example[F[_]: Monad](implicit stm: STM[F]): F[Option[ThingWithId]] = {
     import stm._
     for {
-      a <- get[Int](Id(0))
-      _ <- set[Int](Id(1), 1)
+      thing <- put[ThingWithId](id => ThingWithId(id, "I'm a thing!"))
+      _ <- putF[Int](_ => randomInt)
+      _ <- putF[Int](_ => randomInt)
+      _ <- put[ThingWithId](id => ThingWithId(id, "I'm a thing!"))
+      a <- get(thing.id)
+      _ <- modify[ThingWithId](thing.id, _.copy(name = "I'm a modified thing!"))
     } yield a
   }
 
   def main(args: Array[String]): Unit = {
-    val e: S[Option[Int]] = example[S]
-    println(e.run(emptyState).value)
+    val (state, result) = example[S].run(emptyState).value
+    println(state)
+    println(result)
   }
 
 }
