@@ -10,9 +10,9 @@ import cats.implicits._
 object MapStateSTM {
   import STM._
 
-  case class StateData(nextGuid: Guid, map: Map[Guid, Any], random: PRandom, context: STMContext)
+  case class StateData(nextGuid: Guid, map: Map[Guid, Any], random: PRandom, context: TransactionContext)
 
-  def emptyState: StateData = StateData(0, Map.empty, PRandom(0), STMContext(Moment(0)))
+  def emptyState: StateData = StateData(0, Map.empty, PRandom(0), TransactionContext(Moment(0)))
 
   type S[A] = State[StateData, A]
 
@@ -40,7 +40,7 @@ object MapStateSTM {
     def randomFloat: S[Float] = rand(_.float)
     def randomDouble: S[Double] = rand(_.double)
 
-    def context: S[STMContext] = State.inspect(_.context)
+    def context: S[TransactionContext] = State.inspect(_.context)
 
     private def createGuid: S[Guid] = State(sd => (sd.copy(nextGuid = sd.nextGuid + 1), sd.nextGuid))
 

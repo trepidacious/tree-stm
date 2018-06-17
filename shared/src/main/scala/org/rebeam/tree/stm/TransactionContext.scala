@@ -15,4 +15,4 @@ import io.circe.generic.JsonCodec
   *  with the correct moment.)
   */
 @JsonCodec
-case class STMContext(moment: Moment)
+case class TransactionContext(moment: Moment)

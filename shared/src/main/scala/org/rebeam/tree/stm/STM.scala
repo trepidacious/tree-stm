@@ -41,7 +41,7 @@ abstract class STM[F[_]: Monad] {
   def randomFloat: F[Float]
   def randomDouble: F[Double]
 
-  def context: F[STMContext]
+  def context: F[TransactionContext]
 
   //Safer if this is used only via put and putF
   //def createGuid: F[Guid]
