@@ -27,12 +27,7 @@ object STM {
 case class Id[+A](guid: STM.Guid)
 
 
-abstract class STM[F[_]: Monad] {
-
-  def get[A](id: Id[A]): F[Option[A]]
-  def set[A](id: Id[A], a: A): F[Unit]
-
-  def modifyF[A](id: Id[A], f: A => F[A]): F[Option[A]]
+abstract class TransactionOps[F[_]: Monad] {
 
   def randomInt: F[Int]
   def randomIntUntil(bound: Int): F[Int]
@@ -43,6 +38,18 @@ abstract class STM[F[_]: Monad] {
 
   def context: F[TransactionContext]
 
+  // For convenience, could use Monad directly
+  def pure[A](a: A): F[A] = implicitly[Monad[F]].pure(a)
+}
+
+abstract class STM[F[_]: Monad] extends TransactionOps {
+
+  def get[A](id: Id[A]): F[Option[A]]
+  def set[A](id: Id[A], a: A): F[Unit]
+
+  def modifyF[A](id: Id[A], f: A => F[A]): F[Option[A]]
+
+
   //Safer if this is used only via put and putF
   //def createGuid: F[Guid]
 
@@ -52,8 +59,7 @@ abstract class STM[F[_]: Monad] {
   def put[A](create: Id[A] => A): F[A] = putF(create.andThen(pure))
   def modify[A](id: Id[A], f: A => A): F[Option[A]] = modifyF(id, f.andThen(pure))
 
-  // For convenience, could use Monad directly
-  def pure[A](a: A): F[A] = implicitly[Monad[F]].pure(a)
+
 }
 
 
