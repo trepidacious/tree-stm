@@ -1,4 +1,4 @@
-package org.rebeam.tree.random
+package org.rebeam.tree
 
 /**
   * Pure Pseudorandom number generator, operates like State

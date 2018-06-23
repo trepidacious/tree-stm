@@ -1,14 +1,15 @@
 package org.rebeam.tree.stm
 
-import MapStateSTM._
+import org.rebeam.tree.MapStateSTM._
 import cats.Monad
 import cats.implicits._
+import org.rebeam.tree.{Id, STMOps}
 
 object STMMain {
 
   case class ThingWithId(id: Id[ThingWithId], name: String)
 
-  def example[F[_]: Monad](implicit stm: STM[F]): F[Option[ThingWithId]] = {
+  def example[F[_]: Monad](implicit stm: STMOps[F]): F[Option[ThingWithId]] = {
     import stm._
     for {
       thing <- put[ThingWithId](id => ThingWithId(id, "I'm a thing!"))

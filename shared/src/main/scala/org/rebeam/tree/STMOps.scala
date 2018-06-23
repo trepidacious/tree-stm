@@ -1,9 +1,8 @@
-package org.rebeam.tree.stm
+package org.rebeam.tree
 
 import cats.Monad
 
-object STM {
-  type Guid = Long
+object STMOps {
 
 // TODO there might be some way to provide these functions to enable one import STM._ rather than
 // an import stm._ in every program, but the [A] makes it difficult.
@@ -19,30 +18,9 @@ object STM {
 
 }
 
-/**
-  * An identifier for an item of data of a known type, using a Guid
-  * @param guid The Guid
-  * @tparam A Type of the identified item
-  */
-case class Id[+A](guid: STM.Guid)
 
 
-abstract class TransactionOps[F[_]: Monad] {
-
-  def randomInt: F[Int]
-  def randomIntUntil(bound: Int): F[Int]
-  def randomLong: F[Long]
-  def randomBoolean: F[Boolean]
-  def randomFloat: F[Float]
-  def randomDouble: F[Double]
-
-  def context: F[TransactionContext]
-
-  // For convenience, could use Monad directly
-  def pure[A](a: A): F[A] = implicitly[Monad[F]].pure(a)
-}
-
-abstract class STM[F[_]: Monad] extends TransactionOps {
+abstract class STMOps[F[_]: Monad] extends TransactionOps {
 
   def get[A](id: Id[A]): F[Option[A]]
   def set[A](id: Id[A], a: A): F[Unit]
@@ -58,7 +36,6 @@ abstract class STM[F[_]: Monad] extends TransactionOps {
   // For convenience, allow use of plain A
   def put[A](create: Id[A] => A): F[A] = putF(create.andThen(pure))
   def modify[A](id: Id[A], f: A => A): F[Option[A]] = modifyF(id, f.andThen(pure))
-
 
 }
 

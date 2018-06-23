@@ -1,18 +1,17 @@
-package org.rebeam.tree.stm
+package org.rebeam.tree
 
 import cats.data.State
-import org.rebeam.tree.random.PRandom
 import cats.implicits._
+import org.rebeam.tree.Guid._
 
 /**
   * Implementation of STM using a Map and PRandom as State
   */
 object MapStateSTM {
-  import STM._
 
   case class StateData(nextGuid: Guid, map: Map[Guid, Any], random: PRandom, context: TransactionContext)
 
-  def emptyState: StateData = StateData(0, Map.empty, PRandom(0), TransactionContext(Moment(0)))
+  def emptyState: StateData = StateData(Guid(SessionId(0), SessionTransactionId(0), TransactionClock(0)), Map.empty, PRandom(0), TransactionContext(Moment(0)))
 
   type S[A] = State[StateData, A]
 
@@ -21,7 +20,7 @@ object MapStateSTM {
     (sd.copy(random = newRandom), a)
   })
 
-  implicit val stmInstance: STM[S] = new STM[S] {
+  implicit val stmInstance: STMOps[S] = new STMOps[S] {
     def get[A](id: Id[A]): S[Option[A]] = State(sd => (sd, sd.map.get(id.guid).map(_.asInstanceOf[A])))
     def set[A](id: Id[A], a: A): S[Unit] = State(sd => (sd.copy(map = sd.map + (id.guid -> a)), ()))
 
@@ -42,7 +41,7 @@ object MapStateSTM {
 
     def context: S[TransactionContext] = State.inspect(_.context)
 
-    private def createGuid: S[Guid] = State(sd => (sd.copy(nextGuid = sd.nextGuid + 1), sd.nextGuid))
+    private def createGuid: S[Guid] = State(sd => (sd.copy(nextGuid = sd.nextGuid.copy(transactionClock = sd.nextGuid.transactionClock.next)), sd.nextGuid))
 
     def putF[A](create: Id[A] => S[A]) : S[A] = for {
       id <- createGuid.map(Id[A] _)

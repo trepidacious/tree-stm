@@ -1,4 +1,4 @@
-package org.rebeam.tree.stm
+package org.rebeam.tree
 
 import io.circe.generic.JsonCodec
 
