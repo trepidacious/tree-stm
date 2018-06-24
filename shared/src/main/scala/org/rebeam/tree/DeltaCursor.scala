@@ -1,8 +1,7 @@
 package org.rebeam.tree
 
-import cats.Monad
-import cats.implicits._
 import monocle.{Lens, Prism}
+import org.rebeam.tree.Delta.{LensDelta, PrismDelta}
 
 /**
   * A DeltaCursor provides a location in which to apply a Delta. This allows us to convert
@@ -30,6 +29,14 @@ trait DeltaCursor[A] {
     */
   def zoom[B](lens: Lens[A, B]): DeltaCursor[B] = DeltaCursor.Zoomed(this, lens)
 
+  /**
+    * Produce a new TransactionCursor, operating on some portion of
+    * the data at this cursor
+    * @param prism  Prism to operate on the data
+    * @tparam B     Type of data in new cursor
+    * @return       New TransactionCursor
+    */
+  def refract[B](prism: Prism[A, B]): DeltaCursor[B] = DeltaCursor.Refracted(this, prism)
 }
 
 object DeltaCursor {
@@ -51,7 +58,7 @@ object DeltaCursor {
     * @tparam A     Data type
     */
   case class Zoomed[P, A](parent: DeltaCursor[P], lens: Lens[P, A]) extends DeltaCursor[A] {
-    def transact(delta: Delta[A]): Transaction = Transaction.DeltaAtLens(parent, lens, delta)
+    def transact(delta: Delta[A]): Transaction = parent.transact(LensDelta(lens, delta))
   }
 
   /**
@@ -62,6 +69,6 @@ object DeltaCursor {
     * @tparam A     Data type
     */
   case class Refracted[P, A](parent: DeltaCursor[P], prism: Prism[P, A]) extends DeltaCursor[A] {
-    def transact(delta: Delta[A]): Transaction = Transaction.DeltaAtPrism(parent, prism, delta)
+    def transact(delta: Delta[A]): Transaction = parent.transact(PrismDelta(prism, delta))
   }
 }
