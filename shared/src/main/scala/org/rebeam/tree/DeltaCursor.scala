@@ -65,18 +65,3 @@ object DeltaCursor {
     def transact(delta: Delta[A]): Transaction = Transaction.DeltaAtPrism(parent, prism, delta)
   }
 }
-
-
-
-object Test {
-  case class AddRandom(times: Int) extends Delta[Int] {
-    def apply[F[_]: Monad](a: Int)(implicit stm: STMOps[F]): F[Int] = {
-      import stm._
-      for {
-        r <- randomInt
-      } yield a + r * times
-    }
-  }
-
-
-}
