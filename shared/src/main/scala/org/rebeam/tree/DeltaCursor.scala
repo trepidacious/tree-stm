@@ -1,7 +1,8 @@
 package org.rebeam.tree
 
-import monocle.{Lens, Prism}
-import org.rebeam.tree.Delta.{LensDelta, PrismDelta}
+import monocle.{Lens, Optional, Prism}
+import org.rebeam.tree.Delta._
+import scala.collection.immutable.Seq
 
 /**
   * A DeltaCursor provides a location in which to apply a Delta. This allows us to convert
@@ -37,6 +38,16 @@ trait DeltaCursor[A] {
     * @return       New TransactionCursor
     */
   def refract[B](prism: Prism[A, B]): DeltaCursor[B] = DeltaCursor.Refracted(this, prism)
+
+  /**
+    * Produce a new TransactionCursor, operating on some portion of
+    * the data at this cursor
+    * @param optional Optional to operate on the data
+    * @tparam B       Type of data in new cursor
+    * @return         New TransactionCursor
+    */
+  def zoomOptional[B](optional: Optional[A, B]): DeltaCursor[B] = DeltaCursor.OptionalCursor(this, optional)
+
 }
 
 object DeltaCursor {
@@ -70,5 +81,53 @@ object DeltaCursor {
     */
   case class Refracted[P, A](parent: DeltaCursor[P], prism: Prism[P, A]) extends DeltaCursor[A] {
     def transact(delta: Delta[A]): Transaction = parent.transact(PrismDelta(prism, delta))
+  }
+
+  /**
+    * Operates on a view of the data in a parent DeltaCursor, using an Optional
+    * @param parent   The parent cursor
+    * @param optional The optional on parent's data
+    * @tparam P       Parent data type
+    * @tparam A       Data type
+    */
+  case class OptionalCursor[P, A](parent: DeltaCursor[P], optional: Optional[P, A]) extends DeltaCursor[A] {
+    def transact(delta: Delta[A]): Transaction = parent.transact(OptionalDelta(optional, delta))
+  }
+
+  /**
+    * Operates on the contents of an Option in a parent DeltaCursor
+    * @param parent   The parent cursor
+    * @tparam A       Data type
+    */
+  case class OptionCursor[A](parent: DeltaCursor[Option[A]]) extends DeltaCursor[A] {
+    def transact(delta: Delta[A]): Transaction = parent.transact(OptionDelta(delta))
+  }
+
+  /**
+    * Operates on an indexed element of a Seq in a parent DeltaCursor
+    * @param parent   The parent cursor
+    * @param index    The index
+    * @tparam A       Data type in seq
+    */
+  case class SeqIndexCursor[A](parent: DeltaCursor[Seq[A]], index: Int) extends DeltaCursor[A] {
+    def transact(delta: Delta[A]): Transaction = parent.transact(SeqIndexDelta(index, delta))
+  }
+
+  /**
+    * Convenience method to zoom into contents of an Option
+    * @param cursor Cursor to an Option
+    * @tparam A     Type of value in Option
+    */
+  implicit class CursorAtOption[A](cursor: DeltaCursor[Option[A]]) {
+    def zoomSome: DeltaCursor[A] = OptionCursor(cursor)
+  }
+
+  /**
+    * Convenience method to zoom into contents of a Seq using an index
+    * @param cursor Cursor to a Seq
+    * @tparam A     Type of value in Seq
+    */
+  implicit class CursorAtSeq[A](cursor: DeltaCursor[Seq[A]]) {
+    def zoomIndex(index: Int): DeltaCursor[A] = SeqIndexCursor(cursor, index)
   }
 }
