@@ -4,7 +4,6 @@ import org.rebeam.tree.MapStateSTM._
 import cats.Monad
 import cats.implicits._
 import monocle.macros.Lenses
-import org.rebeam.tree.Delta.ValueDelta
 import org.rebeam.tree._
 
 object STMMain {
@@ -53,14 +52,12 @@ object STMMain {
 
     println(taskList)
 
-    // Create a cursor that will edit the name of the first task
-    val firstTaskName = DeltaCursor
+    // Cursor at the name of task list
+    val taskListName = DeltaCursor
       .AtId(taskList.id)
-      .zoom(TaskList.tasks)
-      .zoomIndex(0)
-      .zoom(Task.name)
+      .zoom(TaskList.name)
 
-    val t1 = firstTaskName.transact(ValueDelta("The First Task"))
+    val t1 = taskListName.set("The list of tasks")
 
     println(t1)
 
@@ -68,7 +65,23 @@ object STMMain {
 
     println(s2)
 
-//    val (state, result) = example[S].run(emptyState).value
+    // Cursor at the name of the first task
+    val firstTaskName = DeltaCursor
+      .AtId(taskList.id)
+      .zoom(TaskList.tasks)
+      .zoomIndex(0)
+      .zoom(Task.name)
+
+    val t2 = firstTaskName.set("The First Task")
+
+    println(t2)
+
+    val (s3, _) = t2[S].run(s2).value
+
+    println(s3)
+
+
+    //    val (state, result) = example[S].run(emptyState).value
 //    println(state)
 //    println(result)
   }

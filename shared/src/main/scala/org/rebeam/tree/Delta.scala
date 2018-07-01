@@ -4,8 +4,6 @@ import cats.{Monad, Traverse}
 import cats.implicits._
 import monocle.{Lens, Optional, Prism}
 
-import scala.collection.immutable.Seq
-
 /**
   * A Delta will take a data value, and produce a new data
   * value using STMOps.
@@ -20,8 +18,8 @@ trait Delta[A] {
 
 object Delta {
 
-  case class ValueDelta[A](a: A) extends Delta[A] {
-    def apply[F[_]: Monad](a: A)(implicit stm: STMOps[F]): F[A] = stm.pure(a)
+  case class ValueDelta[A](newA: A) extends Delta[A] {
+    def apply[F[_]: Monad](a: A)(implicit stm: STMOps[F]): F[A] = stm.pure(newA)
   }
 
   case class LensDelta[A, B](lens: Lens[A, B], delta: Delta[B]) extends Delta[A] {
@@ -57,14 +55,14 @@ object Delta {
       )
   }
 
-  case class SeqIndexDelta[A](index: Int, delta: Delta[A]) extends Delta[Seq[A]] {
-    override def apply[F[_] : Monad](s: Seq[A])(implicit stm: STMOps[F]): F[Seq[A]] =
-      s.lift(index).fold(
-        stm.pure(s)
-      )(
-        delta[F](_).map(a => s.updated(index, a))
-      )
-  }
+//  case class SeqIndexDelta[A](index: Int, delta: Delta[A]) extends Delta[Seq[A]] {
+//    override def apply[F[_] : Monad](s: Seq[A])(implicit stm: STMOps[F]): F[Seq[A]] =
+//      s.lift(index).fold(
+//        stm.pure(s)
+//      )(
+//        delta[F](_).map(a => s.updated(index, a))
+//      )
+//  }
 
   case class TraversableIndexDelta[T[_]: Traverse, A](index: Int, delta: Delta[A]) extends Delta[T[A]] {
     override def apply[F[_] : Monad](s: T[A])(implicit stm: STMOps[F]): F[T[A]] =

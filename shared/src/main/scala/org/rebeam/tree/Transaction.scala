@@ -26,4 +26,6 @@ object Transaction {
       stm.modifyF(id, (a: A) => delta[F](a)).map(_ => ())
   }
 
+
+
 }

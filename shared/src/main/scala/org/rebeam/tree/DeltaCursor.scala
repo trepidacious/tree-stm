@@ -4,8 +4,6 @@ import cats.Traverse
 import monocle.{Lens, Optional, Prism}
 import org.rebeam.tree.Delta._
 
-import scala.collection.immutable.Seq
-
 /**
   * A DeltaCursor provides a location in which to apply a Delta. This allows us to convert
   * a Delta into a Transaction that will apply that Delta at the location.
@@ -22,6 +20,14 @@ trait DeltaCursor[A] {
     * @return       Transaction carrying out the delta
     */
   def transact(delta: Delta[A]): Transaction
+
+  /**
+    * Produce a [[Transaction]] setting the value at the cursor
+    * using a [[ValueDelta]]
+    * @param a  The value to set
+    * @return   The transaction
+    */
+  def set(a: A): Transaction = transact(ValueDelta(a))
 
   /**
     * Produce a new TransactionCursor, operating on some portion of
@@ -105,15 +111,15 @@ object DeltaCursor {
     def transact(delta: Delta[A]): Transaction = parent.transact(OptionDelta(delta))
   }
 
-  /**
-    * Operates on an indexed element of a Seq in a parent DeltaCursor
-    * @param parent   The parent cursor
-    * @param index    The index
-    * @tparam A       Data type in seq
-    */
-  case class SeqIndexCursor[A](parent: DeltaCursor[Seq[A]], index: Int) extends DeltaCursor[A] {
-    def transact(delta: Delta[A]): Transaction = parent.transact(SeqIndexDelta(index, delta))
-  }
+//  /**
+//    * Operates on an indexed element of a Seq in a parent DeltaCursor
+//    * @param parent   The parent cursor
+//    * @param index    The index
+//    * @tparam A       Data type in seq
+//    */
+//  case class SeqIndexCursor[A](parent: DeltaCursor[Seq[A]], index: Int) extends DeltaCursor[A] {
+//    def transact(delta: Delta[A]): Transaction = parent.transact(SeqIndexDelta(index, delta))
+//  }
 
   /**
     * Operates on an indexed element of a Traversable in a parent DeltaCursor
@@ -136,14 +142,14 @@ object DeltaCursor {
     def zoomSome: DeltaCursor[A] = OptionCursor(cursor)
   }
 
-  /**
-    * Convenience method to zoom into contents of a Seq using an index
-    * @param cursor Cursor to a Seq
-    * @tparam A     Type of value in Seq
-    */
-  implicit class CursorAtSeq[A](cursor: DeltaCursor[Seq[A]]) {
-    def zoomIndex(index: Int): DeltaCursor[A] = SeqIndexCursor(cursor, index)
-  }
+//  /**
+//    * Convenience method to zoom into contents of a Seq using an index
+//    * @param cursor Cursor to a Seq
+//    * @tparam A     Type of value in Seq
+//    */
+//  implicit class CursorAtSeq[A](cursor: DeltaCursor[Seq[A]]) {
+//    def zoomIndex(index: Int): DeltaCursor[A] = SeqIndexCursor(cursor, index)
+//  }
 
   /**
     * Convenience method to zoom into contents of a Seq using an index

@@ -30,7 +30,10 @@ object MapStateSTM {
       _ <- a2.map(v => set(id, v)).sequence
       // IDEA not happy with this shorter alternative for some reason...
       //_ <- a2.traverse(v => set(id, v))
-    } yield a2
+    } yield {
+      println(id + ": " + a1 + " -> " + a2)
+      a2
+    }
 
     def randomInt: S[Int] = rand(_.int)
     def randomIntUntil(bound: Int): S[Int] = rand(_.intUntil(bound))
