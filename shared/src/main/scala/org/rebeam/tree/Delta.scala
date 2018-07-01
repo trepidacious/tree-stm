@@ -1,8 +1,9 @@
 package org.rebeam.tree
 
-import cats.Monad
+import cats.{Monad, Traverse}
 import cats.implicits._
 import monocle.{Lens, Optional, Prism}
+
 import scala.collection.immutable.Seq
 
 /**
@@ -56,16 +57,6 @@ object Delta {
       )
   }
 
-  // Seems like this might work for any Seq type, while preserving that type, but needs CanBuildFrom so leaving it for now
-  case class SeqIndexDelta[A, S <: Seq[A]](index: Int, delta: Delta[A])(implicit bf: CanBuildFrom[Seq[A], A, S]) extends Delta[S] {
-    override def apply[F[_] : Monad](s: S)(implicit stm: STMOps[F]): F[S] =
-      s.lift(index).fold(
-        stm.pure(s)
-      )(
-        delta[F](_).map(a => s.updated[A, S](index, a))
-      )
-  }
-
   case class SeqIndexDelta[A](index: Int, delta: Delta[A]) extends Delta[Seq[A]] {
     override def apply[F[_] : Monad](s: Seq[A])(implicit stm: STMOps[F]): F[Seq[A]] =
       s.lift(index).fold(
@@ -75,4 +66,18 @@ object Delta {
       )
   }
 
+  case class TraversableIndexDelta[T[_]: Traverse, A](index: Int, delta: Delta[A]) extends Delta[T[A]] {
+    override def apply[F[_] : Monad](s: T[A])(implicit stm: STMOps[F]): F[T[A]] =
+      s.traverseWithIndexM {
+        case (a, i) if i == index => delta[F](a)
+        case (a, _) => stm.pure(a)
+      }
+  }
+
+  def transform[F[_] : Traverse, A](oldList: F[A], modify: A => A, predicate: Int => Boolean): F[A] = {
+    oldList.mapWithIndex {
+      case (a, i) if predicate(i) => modify(a)
+      case (a, i) => a
+    }
+  }
 }

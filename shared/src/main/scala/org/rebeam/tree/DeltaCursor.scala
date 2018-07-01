@@ -1,7 +1,9 @@
 package org.rebeam.tree
 
+import cats.Traverse
 import monocle.{Lens, Optional, Prism}
 import org.rebeam.tree.Delta._
+
 import scala.collection.immutable.Seq
 
 /**
@@ -114,6 +116,18 @@ object DeltaCursor {
   }
 
   /**
+    * Operates on an indexed element of a Traversable in a parent DeltaCursor
+    * @param parent   The parent cursor
+    * @param index    The index
+    * @tparam A       Data type in Traversable
+    */
+  case class TraversableIndexCursor[T[_]: Traverse, A]
+    (parent: DeltaCursor[T[A]], index: Int) extends DeltaCursor[A] {
+    def transact(delta: Delta[A]): Transaction =
+      parent.transact(TraversableIndexDelta(index, delta))
+  }
+
+  /**
     * Convenience method to zoom into contents of an Option
     * @param cursor Cursor to an Option
     * @tparam A     Type of value in Option
@@ -129,5 +143,14 @@ object DeltaCursor {
     */
   implicit class CursorAtSeq[A](cursor: DeltaCursor[Seq[A]]) {
     def zoomIndex(index: Int): DeltaCursor[A] = SeqIndexCursor(cursor, index)
+  }
+
+  /**
+    * Convenience method to zoom into contents of a Seq using an index
+    * @param cursor Cursor to a Seq
+    * @tparam A     Type of value in Seq
+    */
+  implicit class CursorAtTraversable[T[_]: Traverse, A](cursor: DeltaCursor[T[A]]) {
+    def zoomIndex(index: Int): DeltaCursor[A] = TraversableIndexCursor[T, A](cursor, index)
   }
 }
