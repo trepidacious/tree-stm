@@ -17,6 +17,7 @@ trait Codec[A] {
 }
 
 object Codec {
+
   case class EitherCodec[A](lc: Codec[A], rc: Codec[A]) extends Codec[A] {
     val encoder: PartialEncoder[A] = lc.encoder or rc.encoder
     val decoder: Decoder[A] = lc.decoder or rc.decoder
@@ -28,6 +29,31 @@ object Codec {
     val encoder: PartialEncoder[Delta[A]] = lc.encoder or rc.encoder
     val decoder: Decoder[Delta[A]] = lc.decoder or rc.decoder
   }
+
+  def value[A: Encoder: Decoder]: DeltaCodec[A] = new DeltaCodec[A] {
+
+    val encoder: PartialEncoder[Delta[A]] = {
+      case ValueDelta(v) =>
+        Some(Json.obj(
+          "ValueDelta" -> v.asJson
+        ))
+      case _ => None
+    }
+
+    val decoder: Decoder[Delta[A]] = Decoder.instance {
+      c => c.downField("ValueDelta").as[A]
+        .map(v => ValueDelta(v))
+    }
+  }
+
+  implicit val stringDeltaReader: DeltaCodec[String] = value[String]
+  implicit val booleanDeltaReader: DeltaCodec[Boolean] = value[Boolean]
+  implicit val byteDeltaReader: DeltaCodec[Byte] = value[Byte]
+  implicit val shortDeltaReader: DeltaCodec[Short] = value[Short]
+  implicit val intDeltaReader: DeltaCodec[Int] = value[Int]
+  implicit val longDeltaReader: DeltaCodec[Long] = value[Long]
+  implicit val floatDeltaReader: DeltaCodec[Float] = value[Float]
+  implicit val doubleDeltaReader: DeltaCodec[Double] = value[Double]
 
   def lens[A, B]
     (name: String, lens: Lens[A, B])
@@ -156,25 +182,5 @@ object Codec {
 
   def listIndex[A](implicit dCodecA: DeltaCodec[A]): DeltaCodec[List[A]] = traversableIndex[List, A]
   def vectorIndex[A](implicit dCodecA: DeltaCodec[A]): DeltaCodec[Vector[A]] = traversableIndex[Vector, A]
-
-  def value[A](
-    implicit
-    deltaBEncoder: Encoder[A],
-    deltaBDecoder: Decoder[A]
-  ): DeltaCodec[A] = new DeltaCodec[A] {
-
-    val encoder: PartialEncoder[Delta[A]] = {
-      case ValueDelta(v) =>
-        Some(Json.obj(
-          "ValueDelta" -> v.asJson
-        ))
-      case _ => None
-    }
-
-    val decoder: Decoder[Delta[A]] = Decoder.instance {
-      c => c.downField("ValueDelta").as[A]
-        .map(v => ValueDelta(v))
-    }
-  }
 
 }

@@ -15,7 +15,9 @@ import org.rebeam.tree.Delta._
 trait DeltaCursor[A] {
 
   /**
-    * Apply to a delta at this cursor to produce a Transaction
+    * Apply to a delta at this cursor to produce a Transaction that will
+    * modify the root of the cursor and return the modified value at this cursor,
+    * or if there is no value at the root, do nothing and return None.
     * @param delta  Delta to apply at cursor
     * @return       Transaction carrying out the delta
     */
@@ -77,7 +79,14 @@ object DeltaCursor {
     * @tparam A     Data type
     */
   case class Zoomed[P, A](parent: DeltaCursor[P], lens: Lens[P, A]) extends DeltaCursor[A] {
-    def transact(delta: Delta[A]): Transaction = parent.transact(LensDelta(lens, delta))
+    def transact(delta: Delta[A]): Transaction =
+      // Use lens to make a LensDelta - this gets us from a Delta[A] to a Delta[P].
+      // We can then transact this using our parent cursor.
+      // NOTE - if we had Transaction[A] we would then:
+      // Finally we can map the Transaction result from a new P back to a new A using the
+      // lens. The outer map is mapping the Transaction, the inner map is mapping the Option it
+      // produces
+      parent.transact(LensDelta(lens, delta)) //.map(_.map(lens.get))
   }
 
   /**
@@ -88,7 +97,9 @@ object DeltaCursor {
     * @tparam A     Data type
     */
   case class Refracted[P, A](parent: DeltaCursor[P], prism: Prism[P, A]) extends DeltaCursor[A] {
-    def transact(delta: Delta[A]): Transaction = parent.transact(PrismDelta(prism, delta))
+    def transact(delta: Delta[A]): Transaction =
+      // See explanation for Zoomed, but note that here we
+      parent.transact(PrismDelta(prism, delta)) //.map(_.flatMap(prism.getOption))
   }
 
   /**

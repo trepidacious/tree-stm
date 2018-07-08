@@ -91,12 +91,7 @@ object Guid {
     g => Json.fromString(toString(g))
   )
 
-  implicit val guidKeyEncoder: KeyEncoder[Guid] = new KeyEncoder[Guid] {
-    override def apply(key: Guid): String = Guid.toString(key)
-  }
-
-  implicit val guidKeyDecoder: KeyDecoder[Guid] = new KeyDecoder[Guid] {
-    override def apply(key: String): Option[Guid] = Guid.fromString(key)
-  }
+  implicit val guidKeyEncoder: KeyEncoder[Guid] = KeyEncoder.instance(Guid.toString)
+  implicit val guidKeyDecoder: KeyDecoder[Guid] = KeyDecoder.instance(Guid.fromString)
 
 }

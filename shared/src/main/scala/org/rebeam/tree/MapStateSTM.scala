@@ -9,7 +9,9 @@ import org.rebeam.tree.Guid._
   */
 object MapStateSTM {
 
-  case class StateData(nextGuid: Guid, map: Map[Guid, Any], random: PRandom, context: TransactionContext)
+  case class StateData(nextGuid: Guid, map: Map[Guid, Any], random: PRandom, context: TransactionContext) {
+    def get[A](id: Id[A]): Option[A] = map.get(id.guid).map(_.asInstanceOf[A])
+  }
 
   def emptyState: StateData = StateData(Guid(SessionId(0), SessionTransactionId(0), TransactionClock(0)), Map.empty, PRandom(0), TransactionContext(Moment(0)))
 
@@ -21,8 +23,8 @@ object MapStateSTM {
   })
 
   implicit val stmInstance: STMOps[S] = new STMOps[S] {
-    def get[A](id: Id[A]): S[Option[A]] = State(sd => (sd, sd.map.get(id.guid).map(_.asInstanceOf[A])))
-    def set[A](id: Id[A], a: A): S[Unit] = State(sd => (sd.copy(map = sd.map + (id.guid -> a)), ()))
+    def get[A](id: Id[A]): S[Option[A]] = State.inspect(_.get(id))
+    def set[A](id: Id[A], a: A): S[Unit] = State.modify(sd => sd.copy(map = sd.map + (id.guid -> a)))
 
     def modifyF[A](id: Id[A], f: A => S[A]): S[Option[A]] = for {
       a1 <- get[A](id)
@@ -30,10 +32,7 @@ object MapStateSTM {
       _ <- a2.map(v => set(id, v)).sequence
       // IDEA not happy with this shorter alternative for some reason...
       //_ <- a2.traverse(v => set(id, v))
-    } yield {
-      println(id + ": " + a1 + " -> " + a2)
-      a2
-    }
+    } yield a2
 
     def randomInt: S[Int] = rand(_.int)
     def randomIntUntil(bound: Int): S[Int] = rand(_.intUntil(bound))
