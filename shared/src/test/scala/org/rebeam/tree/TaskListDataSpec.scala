@@ -111,4 +111,23 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
 
   }
 
+  "encode and decode transaction on first task's name" in {
+
+    val (s1, taskList) = taskListResult
+
+    // Cursor at the name of the first task
+    val firstTaskName = DeltaCursor
+      .AtId(taskList.id)
+      .zoom(TaskList.tasks)
+      .zoomIndex(0)
+      .zoom(Task.name)
+
+    val newName = "The First Task"
+
+    val t1 = firstTaskName.set(newName)
+
+    //TODO
+  }
+
+
 }
