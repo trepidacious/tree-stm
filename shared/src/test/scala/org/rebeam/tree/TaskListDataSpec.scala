@@ -151,7 +151,7 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
 
     val t1: Transaction = firstTaskName.set(newName)
 
-    val tCodec: TransactionCodec = TransactionCodec.deltaAtIdCodec or TransactionCodec.transactionCodec[C]()
+    val tCodec: TransactionCodec = TransactionCodec.deltaAtIdCodec
 
     println(TransactionCodec.deltaAtIdCodec.encoder(t1)(s1))
 

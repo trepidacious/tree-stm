@@ -32,10 +32,10 @@ object Ref {
   def toString[A](r: Ref[A]): String = f"ref-${r.id.guid.sessionId.id}%x-${r.id.guid.sessionTransactionId.id}%x-${r.id.guid.transactionClock.id}%x"
 
   //Encoder and decoder using plain string format for ref
-  implicit def decodeId[A]: Decoder[Ref[A]] = Decoder.instance(
+  implicit def decodeRef[A]: Decoder[Ref[A]] = Decoder.instance(
     c => c.as[String].flatMap(string => fromString[A](string).fold[Either[DecodingFailure, Ref[A]]](Left(DecodingFailure("Ref invalid string", c.history)))(Right(_)))
   )
-  implicit def encodeId[A]: Encoder[Ref[A]] = Encoder.instance(
+  implicit def encodeRef[A]: Encoder[Ref[A]] = Encoder.instance(
     r => Json.fromString(toString(r))
   )
 }
