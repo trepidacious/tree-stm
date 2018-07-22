@@ -14,6 +14,7 @@ import scala.util.matching.Regex
   */
 case class Id[+A](guid: Guid) {
   override def toString: String = Id.toString(this)
+  def toJson: Json = Json.fromString(toString)
 }
 
 object Id {

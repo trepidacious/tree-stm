@@ -43,19 +43,4 @@ object Transaction {
       stm.modifyF(id, (a: A) => delta[F](a)).map(_ => ())
   }
 
-//  def deltaAtIdTransactionCodec[A]: Codec[Transaction] = new Codec[Transaction] {
-//    val encoder: PartialEncoder[Transaction] = {
-//      case DeltaAtId(v) =>
-//        Some(Json.obj(
-//          "ValueDelta" -> v.asJson
-//        ))
-//      case _ => None
-//    }
-//
-//    val decoder: Decoder[Delta[A]] = Decoder.instance {
-//      c => c.downField("ValueDelta").as[A]
-//        .map(v => ValueDelta(v))
-//    }
-//  }
-
 }

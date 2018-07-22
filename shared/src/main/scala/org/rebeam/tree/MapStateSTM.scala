@@ -3,17 +3,37 @@ package org.rebeam.tree
 import cats.data.State
 import cats.implicits._
 import org.rebeam.tree.Guid._
+import org.rebeam.tree.codec.TransactionCodec.IdCodecs
+import org.rebeam.tree.codec._
 
 /**
   * Implementation of STM using a Map and PRandom as State
   */
 object MapStateSTM {
 
-  case class StateData(nextGuid: Guid, map: Map[Guid, Any], random: PRandom, context: TransactionContext) {
-    def get[A](id: Id[A]): Option[A] = map.get(id.guid).map(_.asInstanceOf[A])
+  case class DataRevision[A](data: A, revision: Guid, idCodec: IdCodec[A])
+
+  case class StateData(
+      nextGuid: Guid,
+      map: Map[Guid, DataRevision[_]],
+      random: PRandom,
+      context: TransactionContext) extends IdCodecs {
+    def getDataRevision[A](id: Id[A]): Option[DataRevision[A]] = map.get(id.guid).map(_.asInstanceOf[DataRevision[A]])
+    def getData[A](id: Id[A]): Option[A] = getDataRevision(id).map(_.data)
+    def updated[A](id: Id[A], a: A, revision: Guid)(implicit mCodecA: IdCodec[A]): StateData = {
+      copy(map = map.updated(id.guid, DataRevision(a, revision, mCodecA)))
+    }
+
+    override def codecFor[A](id: Id[A]): Option[IdCodec[A]] =
+      getDataRevision(id).map(_.idCodec)
   }
 
-  def emptyState: StateData = StateData(Guid(SessionId(0), SessionTransactionId(0), TransactionClock(0)), Map.empty, PRandom(0), TransactionContext(Moment(0)))
+  def emptyState: StateData = StateData(
+    Guid(SessionId(0), SessionTransactionId(0), TransactionClock(0)),
+    Map.empty,
+    PRandom(0),
+    TransactionContext(Moment(0))
+  )
 
   type S[A] = State[StateData, A]
 
@@ -23,16 +43,39 @@ object MapStateSTM {
   })
 
   implicit val stmInstance: STMOps[S] = new STMOps[S] {
-    def get[A](id: Id[A]): S[Option[A]] = State.inspect(_.get(id))
-    def set[A](id: Id[A], a: A): S[Unit] = State.modify(sd => sd.copy(map = sd.map + (id.guid -> a)))
+
+    def get[A](id: Id[A]): S[Option[A]] = State.inspect(_.getData(id))
+
+    private def getDataState[A](id: Id[A]): S[Option[DataRevision[A]]] = State.inspect(_.getDataRevision(id))
+
+    private def set[A](id: Id[A], a: A)(implicit idCodec: IdCodec[A]): S[Unit] = for {
+      rev <- createGuid
+      _ <- State.modify((sd: StateData) => sd.updated(id, a, rev))
+    } yield ()
+
+//    // Alternative to for comprehension
+//    def modifyF[A](id: Id[A], f: A => S[A]): S[Option[A]] =
+//      getDataState(id).flatMap(
+//        _.fold(
+//          // No data - nothing to modify, return None
+//          pure(None: Option[A])
+//        )(
+//          dataState =>
+//            f(dataState.data).flatMap(
+//              newData => set(id, newData)(dataState.idCodec).map(_ => Some(newData))
+//            )
+//        )
+//      )
 
     def modifyF[A](id: Id[A], f: A => S[A]): S[Option[A]] = for {
-      a1 <- get[A](id)
-      a2 <- a1.traverse(f)
-      _ <- a2.map(v => set(id, v)).sequence
-      // IDEA not happy with this shorter alternative for some reason...
-      //_ <- a2.traverse(v => set(id, v))
-    } yield a2
+      ds <- getDataState(id)
+      newData <- ds.map(
+        dataState => for {
+          newData <- f(dataState.data)
+          _ <-  set(id, newData)(dataState.idCodec)
+        } yield newData
+      ).sequence
+    } yield newData
 
     def randomInt: S[Int] = rand(_.int)
     def randomIntUntil(bound: Int): S[Int] = rand(_.intUntil(bound))
@@ -45,8 +88,8 @@ object MapStateSTM {
 
     private def createGuid: S[Guid] = State(sd => (sd.copy(nextGuid = sd.nextGuid.copy(transactionClock = sd.nextGuid.transactionClock.next)), sd.nextGuid))
 
-    def putF[A](create: Id[A] => S[A]) : S[A] = for {
-      id <- createGuid.map(Id[A] _)
+    def putF[A](create: Id[A] => S[A])(implicit idCodec: IdCodec[A]) : S[A] = for {
+      id <- createGuid.map(guid => Id[A](guid))
       a <- create(id)
       _ <- set(id, a)
     } yield a

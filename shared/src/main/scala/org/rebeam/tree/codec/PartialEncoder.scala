@@ -29,4 +29,5 @@ trait PartialEncoder[A] extends Serializable { self =>
 
 object PartialEncoder {
   def apply[A](e: Encoder[A]): PartialEncoder[A] = a => Some(e(a))
+  def instance[A](f: A => Option[Json]): PartialEncoder[A] = f(_)
 }

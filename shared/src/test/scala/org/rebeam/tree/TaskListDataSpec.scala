@@ -1,19 +1,25 @@
 package org.rebeam.tree
 
 import cats.implicits._
+import io.circe._
 import org.rebeam.tree.Delta._
 import org.rebeam.tree.TaskListData._
 import org.rebeam.tree.Guid._
 import org.rebeam.tree.MapStateSTM._
 import org.rebeam.tree.Transaction.DeltaAtId
+import org.rebeam.tree.codec.Codec.DeltaCodec
+import org.rebeam.tree.codec.TransactionCodec
 import org.scalatest._
 import org.scalatest.prop.Checkers
 
 class TaskListDataSpec extends WordSpec with Matchers with Checkers {
 
+  private def guid(sid: Long, stid: Long, tc: Long): Guid =
+    Guid(SessionId(sid), SessionTransactionId(stid), TransactionClock(tc))
+
   private val taskListResult = createTaskList[S].run(emptyState).value
 
-  private val taskListGuid = Guid(SessionId(0), SessionTransactionId(0), TransactionClock(0))
+  private val taskListGuid = guid(0, 0, 0)
 
   private val taskListId = Id[TaskList](taskListGuid)
 
@@ -23,11 +29,8 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
       val (s1, taskList) = taskListResult
 
       assert(taskList == TaskList(taskListId, "Task List", List(Task("task 1", done = false), Task("task 2", done = true))))
-      assert(s1.nextGuid == Guid(SessionId(0), SessionTransactionId(0), TransactionClock(1)))
-      assert(s1.map == Map(
-        taskListGuid -> taskList
-      ))
-
+      assert(s1.getDataRevision(taskListId).contains(DataRevision(taskList, guid(0, 0, 1), taskListIdCodec)))
+      assert(s1.nextGuid ==guid(0, 0, 2))
     }
 
     "use cursor to task list name" in {
@@ -48,7 +51,7 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
 
       val (s2, _) = t1[S].run(s1).value
 
-      assert(s2.get(taskListId).map(_.name).contains(newName))
+      assert(s2.getData(taskListId).map(_.name).contains(newName))
 
     }
 
@@ -86,7 +89,7 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
 
       val (s2, _) = t1[S].run(s1).value
 
-      assert(s2.get(taskListId).map(_.tasks.head.name).contains(newName))
+      assert(s2.getData(taskListId).map(_.tasks.head.name).contains(newName))
     }
   }
 
@@ -107,8 +110,30 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
 
     import org.rebeam.tree.codec.syntax._
 
-    println(delta.asJsonOption.map(_.spaces2))
+    val deltaJson = delta.asJsonOption
 
+    assert(deltaJson.contains(
+      Json.obj(
+        "LensDelta" -> Json.obj(
+          "tasks" -> Json.obj(
+            "TraversableIndexDelta" -> Json.obj(
+              "index" -> Json.fromInt(0),
+              "delta" -> Json.obj(
+                "LensDelta" -> Json.obj(
+                  "name" -> Json.obj(
+                    "ValueDelta" -> Json.fromString(newName)
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    ))
+
+    val deltaDecoded = deltaJson.flatMap(implicitly[DeltaCodec[TaskList]].decoder.decodeJson(_).toOption)
+
+    assert(deltaDecoded.contains(delta))
   }
 
   "encode and decode transaction on first task's name" in {
@@ -124,9 +149,11 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
 
     val newName = "The First Task"
 
-    val t1 = firstTaskName.set(newName)
+    val t1: Transaction = firstTaskName.set(newName)
 
-    //TODO
+    println(TransactionCodec.DeltaAtIdCodec.encoder(t1)(s1))
+
+
   }
 
 
