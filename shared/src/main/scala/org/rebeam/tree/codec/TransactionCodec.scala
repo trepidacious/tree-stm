@@ -5,36 +5,51 @@ import io.circe._
 import org.rebeam.tree.Transaction.DeltaAtId
 import org.rebeam.tree._
 
+import scala.reflect.ClassTag
+
+trait TransactionCodec {
+  def encoder: TransactionEncoder
+  def decoder: TransactionDecoder
+
+  final def or(c: => TransactionCodec): TransactionCodec = new TransactionCodec {
+    override def encoder: TransactionEncoder = encoder or c.encoder
+
+    override val decoder: TransactionDecoder = decoder or c.decoder
+  }
+}
 
 object TransactionCodec {
 
-
-  trait TransactionEncoder {
-    /**
-      * Convert a value to Some(JSON) if possible, None if not.
-      */
-    def apply(t: Transaction)(idCodecs: IdCodecs): Option[Json]
-  }
-
-  trait TransactionDecoder {
-    /**
-      * Decode the given [[HCursor]] as a [[Transaction]]
-      */
-    def apply(c: HCursor)(idCodecs: IdCodecs): Decoder.Result[Transaction]
-  }
-
-  trait TransactionCodec {
-    def encoder: TransactionEncoder
-    val decoder: TransactionDecoder
-  }
-
-  trait IdCodecs {
-    def codecFor[A](id: Id[A]): Option[IdCodec[A]]
-  }
-
   private implicit val decodeIdAny: Decoder[Id[Any]] = Id.decodeId[Any]
 
-  val DeltaAtIdCodec: TransactionCodec = new TransactionCodec {
+  /**
+    * A [[TransactionCodec]] for a simple [[Transaction]] that can be encoded and decoded
+    * by plain [[Encoder]] and [[Decoder]] instances.
+    * @param name     Name of the transaction, used as a type tag
+    * @param ct       Classtag to identify transaction when encoding - best not to use generic transactions
+    * @param encodeA  Encoder for A
+    * @param decodeA  Decoder for A
+    * @tparam A       The type of [[Transaction]]
+    * @return         A [[TransactionCodec]] for A
+    */
+  def transactionCodec[A <: Transaction](name: String)(implicit ct: ClassTag[A], encodeA: Encoder[A], decodeA: Decoder[A]): TransactionCodec = new TransactionCodec {
+    override def encoder: TransactionEncoder = new TransactionEncoder {
+      override def apply(t: Transaction)(idCodecs: IdCodecs): Option[Json] = for {
+        a <- ct.unapply(t)
+      } yield Json.obj(
+        "Transaction" -> Json.obj(
+          name -> encodeA(a)
+        )
+      )
+    }
+
+    override def decoder: TransactionDecoder = new TransactionDecoder {
+      override def apply(c: HCursor)(idCodecs: IdCodecs): Result[Transaction] =
+        c.downField("Transaction").downField(name).as[A](decodeA)
+    }
+  }
+
+  val deltaAtIdCodec: TransactionCodec = new TransactionCodec {
     override val encoder: TransactionEncoder = new TransactionEncoder {
       override def apply(t: Transaction)(idCodecs: IdCodecs): Option[Json] = {
         t match {

@@ -3,7 +3,6 @@ package org.rebeam.tree
 import cats.data.State
 import cats.implicits._
 import org.rebeam.tree.Guid._
-import org.rebeam.tree.codec.TransactionCodec.IdCodecs
 import org.rebeam.tree.codec._
 
 /**
