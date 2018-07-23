@@ -21,7 +21,8 @@ object TaskListData {
 
   implicit val taskDeltaCodec: Codec[Delta[Task]] = lens("name", Task.name) or lens("done", Task.done)
 
-  // Can edit any list of Tasks using index (not the best approach - better to use a list of Refs, then edit using Id)
+  // Can edit any list of Tasks using index (not the best approach - better to use a list of Refs,
+  // then edit using Id, see RefTaskListDataSpec)
   implicit val tasksDeltaCodec: DeltaCodec[List[Task]] = listIndex[Task]
 
   implicit val taskListDeltaCodec: Codec[Delta[TaskList]] = lens("name", TaskList.name) or lens("tasks", TaskList.tasks)

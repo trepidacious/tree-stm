@@ -4,7 +4,7 @@ import cats.Monad
 import cats.implicits._
 import io.circe.generic.JsonCodec
 import monocle.macros.Lenses
-import org.rebeam.tree.codec.{Codec, IdCodec}
+import org.rebeam.tree.codec._
 import org.rebeam.tree.codec.Codec._
 
 /**
@@ -25,10 +25,17 @@ object RefTaskListData {
 
   implicit val taskDeltaCodec: Codec[Delta[Task]] = lens("name", Task.name) or lens("done", Task.done)
 
-  implicit val taskListDeltaCodec: Codec[Delta[TaskList]] = lens("name", TaskList.name) //or lens("tasks", TaskList.tasks)
+  // Can edit any list of Ref[Task] using a new value - note we would be editing the list contents, not the
+  // individual Tasks, which are edited via their id in the STM
+  // Note: A better approach would be to provide individual editing operations on the list, e.g. add, remove etc.,
+  // or to provide these via actions on the TaskList
+  implicit val tasksDeltaCodec: DeltaCodec[List[Ref[Task]]] = value[List[Ref[Task]]]
+
+  implicit val taskListDeltaCodec: Codec[Delta[TaskList]] = lens("name", TaskList.name) or lens("tasks", TaskList.tasks)
 
   // Allows Tasks and TaskLists to be put in STM
   implicit val taskIdCodec: IdCodec[Task] = IdCodec[Task]("Task")
+
   implicit val taskListIdCodec: IdCodec[TaskList] = IdCodec[TaskList]("TaskList")
 
   def createTask[F[_]: Monad](i: Int)(implicit stm: STMOps[F]): F[Ref[Task]] =
