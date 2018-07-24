@@ -1,5 +1,6 @@
 package org.rebeam.tree
 
+import cats.implicits._
 //import org.rebeam.tree.ExampleData._
 //import org.rebeam.tree.MapStateSTM._
 //import org.rebeam.tree.Delta._
@@ -21,13 +22,19 @@ class RefTaskListDataSpec extends WordSpec with Matchers with Checkers {
   private def guid(sid: Long, stid: Long, tc: Long): Guid =
     Guid(SessionId(sid), SessionTransactionId(stid), TransactionClock(tc))
 
-  private val taskListResult = createTaskList[S].run(emptyState).value
+  private def runS[A](s: S[A], stateData: StateData = emptyState): (StateData, A) = {
+    val errorOrA = s.run(stateData)
+    assert(errorOrA.isRight)
+    errorOrA.right.get
+  }
+
+  private def taskListResult = runS(createTaskList[S])
 
   private val taskListGuid = guid(0, 0, 0)
 
   private val taskListId = Id[TaskList](taskListGuid)
 
-  "TaskListData" should {
+  "RefTaskListData" should {
 
     "create expected data" in {
       val (s1, taskList) = taskListResult
@@ -35,7 +42,7 @@ class RefTaskListDataSpec extends WordSpec with Matchers with Checkers {
       println(s1)
       println(taskList)
 
-      val (s2, printed) = printTaskList[S](taskList).run(s1).value
+      val (s2, printed) = runS(printTaskList[S](taskList), s1)
 
       println(printed)
 

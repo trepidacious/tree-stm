@@ -17,7 +17,13 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
   private def guid(sid: Long, stid: Long, tc: Long): Guid =
     Guid(SessionId(sid), SessionTransactionId(stid), TransactionClock(tc))
 
-  private val taskListResult = createTaskList[S].run(emptyState).value
+  private def runS[A](s: S[A], stateData: StateData = emptyState): (StateData, A) = {
+    val errorOrA = s.run(stateData)
+    assert(errorOrA.isRight)
+    errorOrA.right.get
+  }
+
+  private def taskListResult = runS(createTaskList[S])
 
   private val taskListGuid = guid(0, 0, 0)
 
@@ -49,7 +55,7 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
       // We should have a transaction with expected delta at expected id
       assert (t1 == DeltaAtId(taskListId, LensDelta(TaskList.name, ValueDelta(newName))))
 
-      val (s2, _) = t1[S].run(s1).value
+      val (s2, _) = runS(t1[S], s1)
 
       assert(s2.getData(taskListId).map(_.name).contains(newName))
 
@@ -87,7 +93,7 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
         )
       )
 
-      val (s2, _) = t1[S].run(s1).value
+      val (s2, _) = runS(t1[S], s1)
 
       assert(s2.getData(taskListId).map(_.tasks.head.name).contains(newName))
     }

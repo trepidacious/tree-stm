@@ -5,16 +5,22 @@ import org.rebeam.tree.codec.IdCodec
 
 abstract class STMOps[F[_]: Monad] extends TransactionOps {
 
-  def get[A](id: Id[A]): F[Option[A]]
+  /**
+    * Get data at an [[Id]]
+    * @param id   The data's [[Id]]
+    * @tparam A   Type of data
+    * @return     The data at specified [[Id]]
+    */
+  def get[A](id: Id[A]): F[A]
 
   /**
-    * Modify data at an id
+    * Modify data at an [[Id]]
     * @param id   The data's [[Id]]
     * @param f    Function to transform old value to new one
     * @tparam A   Type of data
     * @return     The modified data
     */
-  def modifyF[A](id: Id[A], f: A => F[A]): F[Option[A]]
+  def modifyF[A](id: Id[A], f: A => F[A]): F[A]
 
   /**
     * Put a new value into the STM. This will create a new
@@ -31,7 +37,7 @@ abstract class STMOps[F[_]: Monad] extends TransactionOps {
 
   // For convenience, allow use of plain A
   def put[A](create: Id[A] => A)(implicit idCodec: IdCodec[A]): F[A] = putF(create.andThen(pure))
-  def modify[A](id: Id[A], f: A => A): F[Option[A]] = modifyF(id, f.andThen(pure))
+  def modify[A](id: Id[A], f: A => A): F[A] = modifyF(id, f.andThen(pure))
 
 }
 

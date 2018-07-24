@@ -52,7 +52,7 @@ object RefTaskListData {
   def printTaskList[F[_]: Monad](l: TaskList)(implicit stm: STMOps[F]): F[String] = {
     import stm._
     for {
-      tasks <- l.tasks.traverse(ref => get(ref.id)).map(_.flatten)
+      tasks <- l.tasks.traverse(ref => get(ref.id))
     } yield s"${l.name}: ${tasks.map(_.prettyPrint).mkString(", ")}"
   }
 
