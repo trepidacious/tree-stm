@@ -4,7 +4,6 @@ import cats.implicits._
 import io.circe._
 import org.rebeam.tree.Delta._
 import org.rebeam.tree.TaskListData._
-import org.rebeam.tree.Guid._
 import org.rebeam.tree.MapStateSTM._
 import org.rebeam.tree.Transaction.DeltaAtId
 import org.rebeam.tree.codec.Codec.DeltaCodec
@@ -12,16 +11,9 @@ import org.rebeam.tree.codec.TransactionCodec
 import org.scalatest._
 import org.scalatest.prop.Checkers
 
+import SpecUtils._
+
 class TaskListDataSpec extends WordSpec with Matchers with Checkers {
-
-  private def guid(sid: Long, stid: Long, tc: Long): Guid =
-    Guid(SessionId(sid), SessionTransactionId(stid), TransactionClock(tc))
-
-  private def runS[A](s: S[A], stateData: StateData = emptyState): (StateData, A) = {
-    val errorOrA = s.run(stateData)
-    assert(errorOrA.isRight)
-    errorOrA.right.get
-  }
 
   private def taskListResult = runS(createTaskList[S])
 
@@ -157,10 +149,7 @@ class TaskListDataSpec extends WordSpec with Matchers with Checkers {
 
     val t1: Transaction = firstTaskName.set(newName)
 
-    val tCodec: TransactionCodec = TransactionCodec.deltaAtIdCodec
-
     println(TransactionCodec.deltaAtIdCodec.encoder(t1)(s1))
-
 
   }
 

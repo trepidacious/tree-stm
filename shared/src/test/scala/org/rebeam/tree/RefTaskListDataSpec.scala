@@ -8,7 +8,6 @@ import cats.implicits._
 //import org.rebeam.tree.Transaction.DeltaAtId
 //import io.circe.Json
 //import org.rebeam.tree.Delta._
-import org.rebeam.tree.Guid._
 import org.rebeam.tree.MapStateSTM._
 import org.rebeam.tree.RefTaskListData._
 //import org.rebeam.tree.Transaction._
@@ -16,17 +15,9 @@ import org.rebeam.tree.RefTaskListData._
 //import org.rebeam.tree.codec._
 import org.scalatest._
 import org.scalatest.prop.Checkers
+import SpecUtils._
 
 class RefTaskListDataSpec extends WordSpec with Matchers with Checkers {
-
-  private def guid(sid: Long, stid: Long, tc: Long): Guid =
-    Guid(SessionId(sid), SessionTransactionId(stid), TransactionClock(tc))
-
-  private def runS[A](s: S[A], stateData: StateData = emptyState): (StateData, A) = {
-    val errorOrA = s.run(stateData)
-    assert(errorOrA.isRight)
-    errorOrA.right.get
-  }
 
   private def taskListResult = runS(createTaskList[S])
 

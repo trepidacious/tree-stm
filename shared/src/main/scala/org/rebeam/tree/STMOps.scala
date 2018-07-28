@@ -16,7 +16,7 @@ abstract class STMOps[F[_]: Monad] extends TransactionOps {
   /**
     * Modify data at an [[Id]]
     * @param id   The data's [[Id]]
-    * @param f    Function to transform old value to new one
+    * @param f    Function to transform old value to new one, as an F[A]
     * @tparam A   Type of data
     * @return     The modified data
     */
@@ -27,7 +27,7 @@ abstract class STMOps[F[_]: Monad] extends TransactionOps {
     * Id, and this is used to create the data to add to the
     * STM (in case the data includes the Id).
     *
-    * @param create   Function to create data from Id
+    * @param create   Function to create data from Id, as an F[A]
     * @param idCodec  Used to encode/decode data
     *                 and deltas
     * @tparam A       The type of data

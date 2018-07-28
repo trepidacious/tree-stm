@@ -24,8 +24,7 @@ object MapStateSTM {
       nextGuid: Guid,
       map: Map[Guid, DataRevision[_]],
       random: PRandom,
-      context: TransactionContext,
-      failure: Option[String]) extends IdCodecs {
+      context: TransactionContext) extends IdCodecs {
     def getDataRevision[A](id: Id[A]): Option[DataRevision[A]] = map.get(id.guid).map(_.asInstanceOf[DataRevision[A]])
     def getData[A](id: Id[A]): Option[A] = getDataRevision(id).map(_.data)
     def updated[A](id: Id[A], a: A, revision: Guid)(implicit mCodecA: IdCodec[A]): StateData = {
@@ -34,16 +33,13 @@ object MapStateSTM {
 
     override def codecFor[A](id: Id[A]): Option[IdCodec[A]] =
       getDataRevision(id).map(_.idCodec)
-
-    def fail(message: String): StateData = copy(failure = Some(message))
   }
 
   def emptyState: StateData = StateData(
     Guid(SessionId(0), SessionTransactionId(0), TransactionClock(0)),
     Map.empty,
     PRandom(0),
-    TransactionContext(Moment(0)),
-    None
+    TransactionContext(Moment(0))
   )
 
   type ErrorOr[A] = Either[Error, A]
