@@ -90,6 +90,7 @@ class DataSourceViewOpsSpec extends WordSpec with Matchers with Checkers {
       val (state, result) = runView(printValidIds[S], initialStateData(dataSource))
 
       assert(state.missingGuids.isEmpty)
+      assert(state.viewedGuids == Set(id0, id1, id2).map(_.guid))
       assert(result == "0, 1, 2")
 
     }
@@ -99,6 +100,8 @@ class DataSourceViewOpsSpec extends WordSpec with Matchers with Checkers {
       val error = failView(printInvalidIds[S], initialStateData(dataSource))
 
       assert(error.errorGuid == idInfinity.guid)
+      // Note that the failed attempt to get the invalid Id still means the Id was viewed
+      assert(error.viewedGuids == Set(id0, id1, id2, idInfinity).map(_.guid))
       assert(error.missingGuids == Set(idInfinity.guid))
 
     }
@@ -108,6 +111,8 @@ class DataSourceViewOpsSpec extends WordSpec with Matchers with Checkers {
       val (state, result) = runView(printIdsWithOption[S], initialStateData(dataSource))
 
       assert(state.missingGuids == Set(idInfinity.guid))
+      // Note that getting None for the invalid Id still means the Id was viewed
+      assert(state.viewedGuids == Set(id0, id1, id2, idInfinity).map(_.guid))
       assert(result == "0, 1, 2, MISSING")
     }
 
@@ -118,6 +123,9 @@ class DataSourceViewOpsSpec extends WordSpec with Matchers with Checkers {
       // We fail because of inf squared, which is used with a get, but we also
       // notice the missing idInfinity used earlier with getOption
       assert(error.errorGuid == idInfinitySquared.guid)
+      // Note that the idInfinity and IdInfinitySquared are both accessed, as an Option None and a failed access,
+      // respectively
+      assert(error.viewedGuids == Set(id0, id1, id2, idInfinity, idInfinitySquared).map(_.guid))
       assert(error.missingGuids == Set(idInfinity.guid, idInfinitySquared.guid))
     }
 
@@ -125,9 +133,11 @@ class DataSourceViewOpsSpec extends WordSpec with Matchers with Checkers {
 
       val error = failView(printIdsWithInvalidGetThenInvalidGetOption[S], initialStateData(dataSource))
 
-      // We fail because of inf squared, which is used with a get, but we also
-      // notice the missing idInfinity used earlier with getOption
+      // We fail because of idInfinity, and never get to idInfinitySquared
       assert(error.errorGuid == idInfinity.guid)
+      // Note that the failed attempt to get the invalid Id still means the Id was viewed,
+      // but the later attempt to read id 2 and idInfinitySquared never run
+      assert(error.viewedGuids == Set(id0, id1, idInfinity).map(_.guid))
       assert(error.missingGuids == Set(idInfinity.guid))
     }
   }
