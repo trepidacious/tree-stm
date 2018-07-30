@@ -44,7 +44,7 @@ object RefTaskListData {
   def createTaskList[F[_]: Monad](implicit stm: STMOps[F]): F[TaskList] = {
     import stm._
     for {
-      tasks <- 1.to(10).toList.traverse(i => createTask[F](i))
+      tasks <- 1.to(10).toList.traverse(createTask[F])
       taskList <- put[TaskList](TaskList(_, "Task List", tasks))
     } yield taskList
   }
