@@ -6,6 +6,7 @@ import io.circe.generic.JsonCodec
 import monocle.macros.Lenses
 import org.rebeam.tree.codec._
 import org.rebeam.tree.codec.Codec._
+import Syntax._
 
 /**
   * Data example using a TaskList containing [[Ref]]s to Tasks with their
@@ -50,9 +51,8 @@ object RefTaskListData {
   }
 
   def printTaskList[F[_]: Monad](l: TaskList)(implicit stm: STMOps[F]): F[String] = {
-    import stm._
     for {
-      tasks <- l.tasks.traverse(ref => get(ref.id))
+      tasks <- l.tasks.deref[F]
     } yield s"${l.name}: ${tasks.map(_.prettyPrint).mkString(", ")}"
   }
 
