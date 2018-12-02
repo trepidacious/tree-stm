@@ -32,19 +32,17 @@ object TaskListData {
 
   def createTaskList[F[_]: Monad](implicit stm: STMOps[F]): F[TaskList] = {
     import stm._
-    for {
-      taskList <- put[TaskList](
-        TaskList(
-          _,
-          "Task List",
-          List(
-            Task("task 1", done = false),
-            Task("task 2", done = true)
-          )
+    put[TaskList](
+      TaskList(
+        _,
+        "Task List",
+        List(
+          Task("task 1", done = false),
+          Task("task 2", done = true)
         )
       )
-    } yield taskList
-  }
+    )
+}
 
 }
 
