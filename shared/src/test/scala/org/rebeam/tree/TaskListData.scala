@@ -1,7 +1,6 @@
 package org.rebeam.tree
 
 import cats.Monad
-import cats.implicits._
 import io.circe.generic.JsonCodec
 import monocle.macros.Lenses
 import org.rebeam.tree.codec.{Codec, IdCodec}
