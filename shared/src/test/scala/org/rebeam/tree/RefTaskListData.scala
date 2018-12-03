@@ -24,7 +24,7 @@ object RefTaskListData {
   @Lenses
   case class TaskList(id: Id[TaskList], name: String, tasks: List[Ref[Task]])
 
-  implicit val taskDeltaCodec: Codec[Delta[Task]] = lens("name", Task.name) or lens("done", Task.done)
+  implicit val taskDeltaCodec: DeltaCodec[Task] = lens("name", Task.name) or lens("done", Task.done)
 
   // Can edit any list of Ref[Task] using a new value - note we would be editing the list contents, not the
   // individual Tasks, which are edited via their id in the STM
@@ -32,7 +32,7 @@ object RefTaskListData {
   // or to provide these via actions on the TaskList
   implicit val tasksDeltaCodec: DeltaCodec[List[Ref[Task]]] = value[List[Ref[Task]]]
 
-  implicit val taskListDeltaCodec: Codec[Delta[TaskList]] = lens("name", TaskList.name) or lens("tasks", TaskList.tasks)
+  implicit val taskListDeltaCodec: DeltaCodec[TaskList] = lens("name", TaskList.name) or lens("tasks", TaskList.tasks)
 
   // Allows Tasks and TaskLists to be put in STM
   implicit val taskIdCodec: IdCodec[Task] = IdCodec[Task]("Task")
