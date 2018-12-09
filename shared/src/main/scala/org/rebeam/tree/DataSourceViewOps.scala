@@ -32,6 +32,9 @@ object DataSourceViewOps {
 
     def get[A](id: Id[A]): S[A] =
       StateT[ErrorOr, StateData, A](sd => {
+        //Get data as an option, map this to an Option[(StateData, A)] by adding a new state
+        //updated to record viewing the id, then convert to an ErrorOr with appropriate
+        //Error on missing data. This is the S => F[S, A] required by StateT.
         sd.dataSource.get(id)
           .map((sd.viewed(id.guid), _))
           .toRight(Error(
