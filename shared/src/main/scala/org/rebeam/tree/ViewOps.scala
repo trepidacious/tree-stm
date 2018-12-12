@@ -32,6 +32,8 @@ abstract class ViewOps[F[_]: Monad] {
     */
   def getOption[A](id: Id[A]): F[Option[A]]
 
+  // For convenience, could use Monad directly
+  def pure[A](a: A): F[A] = implicitly[Monad[F]].pure(a)
 }
 
 
